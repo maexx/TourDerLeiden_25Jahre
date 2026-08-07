@@ -151,6 +151,15 @@
       </div>
     </section>
 
+    <div id="lightbox" class="lightbox" hidden>
+      <button class="lightbox-close" aria-label="Schließen">&times;</button>
+      <button class="lightbox-prev" aria-label="Vorheriges Bild">&#10094;</button>
+      <img class="lightbox-image" src="" alt="">
+      <button class="lightbox-next" aria-label="Nächstes Bild">&#10095;</button>
+      <button class="lightbox-play" aria-label="Diashow starten/stoppen">▶ Diashow</button>
+      <p class="lightbox-counter"></p>
+    </div>
+
     <section id="strecke">
       <h2>Strecke</h2>
       <div id="routemap" style="height: 480px; border-radius: 6px; border: 1px solid var(--color-border);"></div>
@@ -188,6 +197,69 @@
     L.marker(route2[route2.length - 1]).addTo(map).bindPopup('Ziel: Urlau');
 
     map.fitBounds(L.featureGroup([line1, line2]).getBounds(), { padding: [20, 20] });
+  </script>
+
+  <script>
+    const galleryImgs = Array.from(document.querySelectorAll('.gallery-grid img'));
+    const lightbox = document.getElementById('lightbox');
+    const lightboxImage = lightbox.querySelector('.lightbox-image');
+    const counter = lightbox.querySelector('.lightbox-counter');
+    const playBtn = lightbox.querySelector('.lightbox-play');
+    let currentIndex = 0;
+    let slideshowTimer = null;
+
+    function showImage(index) {
+      currentIndex = (index + galleryImgs.length) % galleryImgs.length;
+      lightboxImage.src = galleryImgs[currentIndex].src;
+      lightboxImage.alt = galleryImgs[currentIndex].alt;
+      counter.textContent = (currentIndex + 1) + ' / ' + galleryImgs.length;
+    }
+
+    function openLightbox(index) {
+      showImage(index);
+      lightbox.hidden = false;
+    }
+
+    function closeLightbox() {
+      lightbox.hidden = true;
+      stopSlideshow();
+    }
+
+    function stopSlideshow() {
+      clearInterval(slideshowTimer);
+      slideshowTimer = null;
+      playBtn.textContent = '▶ Diashow';
+    }
+
+    function toggleSlideshow() {
+      if (slideshowTimer) {
+        stopSlideshow();
+      } else {
+        slideshowTimer = setInterval(() => showImage(currentIndex + 1), 2500);
+        playBtn.textContent = '⏸ Stopp';
+      }
+    }
+
+    galleryImgs.forEach((img, i) => {
+      img.style.cursor = 'pointer';
+      img.addEventListener('click', () => openLightbox(i));
+    });
+
+    lightbox.querySelector('.lightbox-close').addEventListener('click', closeLightbox);
+    lightbox.querySelector('.lightbox-prev').addEventListener('click', () => showImage(currentIndex - 1));
+    lightbox.querySelector('.lightbox-next').addEventListener('click', () => showImage(currentIndex + 1));
+    playBtn.addEventListener('click', toggleSlideshow);
+
+    lightbox.addEventListener('click', (e) => {
+      if (e.target === lightbox) closeLightbox();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (lightbox.hidden) return;
+      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'ArrowLeft') showImage(currentIndex - 1);
+      if (e.key === 'ArrowRight') showImage(currentIndex + 1);
+    });
   </script>
 </body>
 </html>

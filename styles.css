@@ -113,3 +113,68 @@ section h2 {
 .gallery-videos a {
   color: var(--color-primary);
 }
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.lightbox-image {
+  max-width: 85vw;
+  max-height: 80vh;
+  border-radius: 4px;
+}
+
+.lightbox-close,
+.lightbox-prev,
+.lightbox-next,
+.lightbox-play {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  font-size: 1.2rem;
+}
+
+.lightbox-close {
+  top: 1rem;
+  right: 1rem;
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.lightbox-prev {
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.lightbox-next {
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.lightbox-play {
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.9rem;
+}
+
+.lightbox-counter {
+  position: absolute;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  color: #fff;
+  font-size: 0.85rem;
+  margin: 0;
+}
