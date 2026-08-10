@@ -153,7 +153,7 @@
   </footer>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="assets/route-data.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.7.0/gpx.min.js"></script>
   <script>
     const map = L.map('routemap');
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -161,12 +161,42 @@
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    if (route1 && route1.length) {
-      const line1 = L.polyline(route1, { color: '#6a1b3d', weight: 4 }).addTo(map);
-      L.marker(route1[0]).addTo(map).bindPopup('Start: Derendingen');
-      L.marker(route1[route1.length - 1]).addTo(map).bindPopup('Zwiefalten');
-      map.fitBounds(L.featureGroup([line1]).getBounds(), { padding: [20, 20] });
-    }
+    const gpxFiles = [
+      'assets/gpx/2026-07-24_3136751824_TDL2026T0 Derendingen- Zwiefalten.gpx',
+      'assets/gpx/2026-07-24_3136780149_TDL2026 T0 Zwiefalten nach Urlau.gpx',
+      'assets/gpx/2026-07-30_2751431057_TDL2016- HERLAZ- CUNEO - Tag 1.gpx',
+      'assets/gpx/2026-01-16_2751431059_TDL2016- HERLAZ- CUNEO - Tag 2 (1).gpx',
+      'assets/gpx/2026-01-16_2751431060_TDL2016- HERLAZ- CUNEO - Tag 3 (1).gpx',
+      'assets/gpx/2026-08-02_2751431061_TDL2016- HERLAZ- CUNEO - Tag 4.gpx'
+    ];
+
+    const colors = ['#6a1b3d', '#d4af37', '#2f9e44', '#1971c2', '#ae3ec9', '#f08c00'];
+    const bounds = L.latLngBounds([]);
+    let loadedCount = 0;
+
+    gpxFiles.forEach((file, index) => {
+      new L.GPX(file, {
+        async: true,
+        polyline_options: { color: colors[index % colors.length], weight: 4 }
+      })
+        .on('loaded', (event) => {
+          const routeBounds = event.target.getBounds();
+          if (routeBounds && routeBounds.isValid()) {
+            bounds.extend(routeBounds);
+          }
+          loadedCount += 1;
+          if (loadedCount === gpxFiles.length) {
+            map.fitBounds(bounds, { padding: [20, 20] });
+          }
+        })
+        .on('error', () => {
+          loadedCount += 1;
+          if (loadedCount === gpxFiles.length) {
+            map.fitBounds(bounds, { padding: [20, 20] });
+          }
+        })
+        .addTo(map);
+    });
   </script>
 
   <script>
