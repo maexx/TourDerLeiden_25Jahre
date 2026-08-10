@@ -160,7 +160,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.7.0/gpx.min.js"></script>
   <script>
-    const map = L.map('routemap');
+    const map = L.map('routemap').setView([48.5, 9.2], 6);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 18,
       attribution: '&copy; OpenStreetMap contributors'
@@ -192,12 +192,14 @@
           loadedCount += 1;
           if (loadedCount === gpxFiles.length) {
             map.fitBounds(bounds, { padding: [20, 20] });
+            setTimeout(() => map.invalidateSize(), 150);
           }
         })
         .on('error', () => {
           loadedCount += 1;
           if (loadedCount === gpxFiles.length) {
             map.fitBounds(bounds, { padding: [20, 20] });
+            setTimeout(() => map.invalidateSize(), 150);
           }
         })
         .addTo(map);
