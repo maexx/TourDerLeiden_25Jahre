@@ -129,12 +129,15 @@
 
     <section id="strecke">
       <h2>Strecke</h2>
+      <p class="route-intro">Die geplanten Etappen der Tour 2016, Tag 1–5. Hier findest du die vorhandenen GPX-Dateien und die Kartenansicht.</p>
+      <ul class="route-list">
+        <li><strong>Tag 1:</strong> <a href="assets/gpx/2026-07-24_3136751824_TDL2026T0 Derendingen- Zwiefalten.gpx" download>GPX herunterladen (Tag 1)</a></li>
+        <li><strong>Tag 2:</strong> <span class="route-note">kein GPX vorhanden</span></li>
+        <li><strong>Tag 3:</strong> <a href="assets/gpx/2026-07-24_3136780149_TDL2026 T0 Zwiefalten nach Urlau.gpx" download>GPX herunterladen (Tag 3)</a></li>
+        <li><strong>Tag 4:</strong> <span class="route-note">kein GPX vorhanden</span></li>
+        <li><strong>Tag 5:</strong> <span class="route-note">kein GPX vorhanden</span></li>
+      </ul>
       <div id="routemap" style="height: 480px; border-radius: 6px; border: 1px solid var(--color-border);"></div>
-      <p class="gallery-videos">
-        GPX-Downloads:
-        <a href="assets/gpx/2026-07-24_3136751824_TDL2026T0 Derendingen- Zwiefalten.gpx">Etappe 1: Derendingen – Zwiefalten</a> &middot;
-        <a href="assets/gpx/2026-07-24_3136780149_TDL2026 T0 Zwiefalten nach Urlau.gpx">Etappe 2: Zwiefalten – Urlau</a>
-      </p>
     </section>
 
     <section id="links">
@@ -156,14 +159,12 @@
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    const line1 = L.polyline(route1, { color: '#6a1b3d', weight: 4 }).addTo(map);
-    const line2 = L.polyline(route2, { color: '#d4af37', weight: 4 }).addTo(map);
-
-    L.marker(route1[0]).addTo(map).bindPopup('Start: Derendingen');
-    L.marker(route1[route1.length - 1]).addTo(map).bindPopup('Zwiefalten');
-    L.marker(route2[route2.length - 1]).addTo(map).bindPopup('Ziel: Urlau');
-
-    map.fitBounds(L.featureGroup([line1, line2]).getBounds(), { padding: [20, 20] });
+    if (route1 && route1.length) {
+      const line1 = L.polyline(route1, { color: '#6a1b3d', weight: 4 }).addTo(map);
+      L.marker(route1[0]).addTo(map).bindPopup('Start: Derendingen');
+      L.marker(route1[route1.length - 1]).addTo(map).bindPopup('Zwiefalten');
+      map.fitBounds(L.featureGroup([line1]).getBounds(), { padding: [20, 20] });
+    }
   </script>
 
   <script>
