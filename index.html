@@ -46,26 +46,7 @@
 
     <section id="bilder">
       <h2>Bilder &amp; Galerie</h2>
-      <div class="gallery-grid">
-        <img src="assets/gallery-web/20260730_212331.jpg" alt="TDL Foto 20260730_212331" loading="lazy">
-        <img src="assets/gallery-web/20260731_101407.jpg" alt="TDL Foto 20260731_101407" loading="lazy">
-        <img src="assets/gallery-web/20260731_113844.jpg" alt="TDL Foto 20260731_113844" loading="lazy">
-        <img src="assets/gallery-web/20260801_190512.jpg" alt="TDL Foto 20260801_190512" loading="lazy">
-        <img src="assets/gallery-web/20260801_211044.jpg" alt="TDL Foto 20260801_211044" loading="lazy">
-        <img src="assets/gallery-web/20260802_095704.jpg" alt="TDL Foto 20260802_095704" loading="lazy">
-        <img src="assets/gallery-web/20260802_101811.jpg" alt="TDL Foto 20260802_101811" loading="lazy">
-        <img src="assets/gallery-web/20260802_161914.jpg" alt="TDL Foto 20260802_161914" loading="lazy">
-        <img src="assets/gallery-web/20260802_173352.jpg" alt="TDL Foto 20260802_173352" loading="lazy">
-        <img src="assets/gallery-web/20260802_185740.jpg" alt="TDL Foto 20260802_185740" loading="lazy">
-        <img src="assets/gallery-web/20260803_102532.jpg" alt="TDL Foto 20260803_102532" loading="lazy">
-        <img src="assets/gallery-web/20260803_125937.jpg" alt="TDL Foto 20260803_125937" loading="lazy">
-        <img src="assets/gallery-web/20260803_141934.jpg" alt="TDL Foto 20260803_141934" loading="lazy">
-        <img src="assets/gallery-web/IMG_4619.jpg" alt="TDL Foto IMG_4619" loading="lazy">
-        <img src="assets/gallery-web/IMG_4631.jpg" alt="TDL Foto IMG_4631" loading="lazy">
-        <img src="assets/gallery-web/IMG_4656.jpg" alt="TDL Foto IMG_4656" loading="lazy">
-        <img src="assets/gallery-web/IMG_4668.jpg" alt="TDL Foto IMG_4668" loading="lazy">
-        <img src="assets/gallery-web/signal-2026-08-03-20-20-09-906.jpg" alt="TDL Foto signal" loading="lazy">
-      </div>
+      <div class="gallery-grid"></div>
     </section>
 
     <div id="lightbox" class="lightbox" hidden>
@@ -74,6 +55,7 @@
       <img class="lightbox-image" src="" alt="">
       <button class="lightbox-next" aria-label="Nächstes Bild">&#10095;</button>
       <button class="lightbox-play" aria-label="Diashow starten/stoppen">▶ Diashow</button>
+      <p class="lightbox-caption"></p>
       <p class="lightbox-counter"></p>
     </div>
 
@@ -157,9 +139,106 @@
   </script>
 
   <script>
+    const galleryFiles = [
+      '20260730_212331.jpg',
+      '20260731_101407.jpg',
+      '20260731_113844.jpg',
+      '20260731_201708.jpg',
+      '20260731_201739.jpg',
+      '20260801_190512.jpg',
+      '20260801_192441.jpg',
+      '20260801_201359.jpg',
+      '20260801_210038.jpg',
+      '20260801_211044.jpg',
+      '20260802_081148.jpg',
+      '20260802_095305.jpg',
+      '20260802_095704.jpg',
+      '20260802_100302.jpg',
+      '20260802_101811.jpg',
+      '20260802_101948.jpg',
+      '20260802_103529.jpg',
+      '20260802_120952.jpg',
+      '20260802_161914.jpg',
+      '20260802_173352.jpg',
+      '20260802_185740.jpg',
+      '20260802_190829.jpg',
+      '20260803_102532.jpg',
+      '20260803_112345.jpg',
+      '20260803_113644.jpg',
+      '20260803_125937.jpg',
+      '20260803_130151.jpg',
+      '20260803_131859.jpg',
+      '20260803_141934.jpg',
+      '20260803_142048.jpg',
+      '20260803_150448.jpg',
+      '20260804_171206.jpg',
+      '20260804_173656.jpg',
+      '20260804_173859.jpg',
+      '20260804_192923.jpg',
+      'IMG_4619.jpg',
+      'IMG_4623.jpg',
+      'IMG_4624.jpg',
+      'IMG_4626.jpg',
+      'IMG_4627.jpg',
+      'IMG_4628.jpg',
+      'IMG_4630.jpg',
+      'IMG_4631.jpg',
+      'IMG_4633.jpg',
+      'IMG_4634.jpg',
+      'IMG_4636.jpg',
+      'IMG_4637.jpg',
+      'IMG_4638.jpg',
+      'IMG_4639.jpg',
+      'IMG_4640.jpg',
+      'IMG_4641.jpg',
+      'IMG_4643.jpg',
+      'IMG_4646.jpg',
+      'IMG_4647.jpg',
+      'IMG_4650.jpg',
+      'IMG_4655.jpg',
+      'IMG_4656.jpg',
+      'IMG_4663.jpg',
+      'IMG_4664.jpg',
+      'IMG_4666.jpg',
+      'IMG_4669.jpg',
+      'IMG_4670.jpg',
+      'IMG_4671.jpg',
+      'signal-2026-08-03-20-20-09-906.jpg'
+    ];
+
+    const sortedGalleryFiles = galleryFiles.slice().sort((a, b) =>
+      a.localeCompare(b, 'de', { numeric: true, sensitivity: 'base' })
+    );
+
+    function getCaption(fileName) {
+      const stem = fileName.replace(/\.[^.]+$/, '');
+      if (/^\d{8}_\d{6}$/.test(stem)) {
+        const year = stem.slice(0, 4);
+        const month = stem.slice(4, 6);
+        const day = stem.slice(6, 8);
+        const time = `${stem.slice(9, 11)}:${stem.slice(11, 13)}:${stem.slice(13, 15)}`;
+        return `${year}-${month}-${day} ${time}`;
+      }
+      return stem.replace(/[_-]+/g, ' ');
+    }
+
+    const galleryGrid = document.querySelector('.gallery-grid');
+    galleryGrid.innerHTML = sortedGalleryFiles
+      .map((file, index) => {
+        const caption = getCaption(file);
+        return `
+          <figure class="gallery-item is-loading">
+            <img data-index="${index}" src="assets/gallery-web/${file}" alt="TDL Foto ${caption}" loading="lazy" decoding="async" fetchpriority="low">
+            <figcaption>${caption}</figcaption>
+          </figure>
+        `;
+      })
+      .join('');
+
     const galleryImgs = Array.from(document.querySelectorAll('.gallery-grid img'));
     const lightbox = document.getElementById('lightbox');
     const lightboxImage = lightbox.querySelector('.lightbox-image');
+    const lightboxCaption = lightbox.querySelector('.lightbox-caption');
     const counter = lightbox.querySelector('.lightbox-counter');
     const playBtn = lightbox.querySelector('.lightbox-play');
     let currentIndex = 0;
@@ -169,6 +248,8 @@
       currentIndex = (index + galleryImgs.length) % galleryImgs.length;
       lightboxImage.src = galleryImgs[currentIndex].src;
       lightboxImage.alt = galleryImgs[currentIndex].alt;
+      const captionNode = galleryImgs[currentIndex].closest('.gallery-item')?.querySelector('figcaption');
+      lightboxCaption.textContent = captionNode ? captionNode.textContent : '';
       counter.textContent = (currentIndex + 1) + ' / ' + galleryImgs.length;
     }
 
@@ -200,6 +281,10 @@
     galleryImgs.forEach((img, i) => {
       img.style.cursor = 'pointer';
       img.addEventListener('click', () => openLightbox(i));
+      img.addEventListener('load', () => {
+        const item = img.closest('.gallery-item');
+        if (item) item.classList.remove('is-loading');
+      });
     });
 
     lightbox.querySelector('.lightbox-close').addEventListener('click', closeLightbox);
