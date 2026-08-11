@@ -189,11 +189,20 @@
     const colors = ['#6a1b3d', '#d4af37', '#2f9e44', '#1971c2', '#ae3ec9', '#f08c00'];
     const bounds = L.latLngBounds([]);
     let loadedCount = 0;
+    const routeMarkerIcon = 'assets/marker-photo.svg';
 
     gpxFiles.forEach((file, index) => {
       new L.GPX(file, {
         async: true,
-        polyline_options: { color: colors[index % colors.length], weight: 4 }
+        polyline_options: { color: colors[index % colors.length], weight: 4 },
+        marker_options: {
+          startIconUrl: routeMarkerIcon,
+          endIconUrl: routeMarkerIcon,
+          shadowUrl: null,
+          iconSize: [40, 52],
+          iconAnchor: [20, 52],
+          clickable: true
+        }
       })
         .on('loaded', (event) => {
           const routeBounds = event.target.getBounds();
