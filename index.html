@@ -217,7 +217,30 @@
     const routeMap = document.getElementById('routemap');
     const gpxFiles = routeSections.flatMap((section) => section.downloads.map((route) => route.file));
     const colors = ['#6a1b3d', '#d4af37', '#2f9e44', '#1971c2', '#ae3ec9', '#f08c00'];
-    const routeCoordinates = window.gpxRouteCoordinates || {};
+    const rawRouteCoordinates = window.gpxRouteCoordinates || window.routeCoordinates || {};
+
+    function normalizeRouteKey(value) {
+      return String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '');
+    }
+
+    function findRouteCoordinates(file) {
+      if (!file) return [];
+
+      const direct = rawRouteCoordinates[file];
+      if (Array.isArray(direct) && direct.length) return direct;
+
+      const targetKey = normalizeRouteKey(file);
+      for (const [key, coordinates] of Object.entries(rawRouteCoordinates)) {
+        if (normalizeRouteKey(key) === targetKey && Array.isArray(coordinates) && coordinates.length) {
+          return coordinates;
+        }
+      }
+
+      return [];
+    }
 
     function escapeHtml(value) {
       return String(value)
@@ -228,10 +251,10 @@
         .replaceAll("'", '&#39;');
     }
 
-    function renderRouteMap() {
-      const availableRoutes = gpxFiles
+    function getAvailableRoutes() {
+      return gpxFiles
         .map((file, index) => {
-          const coordinates = routeCoordinates[file];
+          const coordinates = findRouteCoordinates(file);
           if (!coordinates || !coordinates.length) return null;
           const routeMeta = routeSections.flatMap((s) => s.downloads).find((r) => r.file === file);
           return {
@@ -242,61 +265,134 @@
           };
         })
         .filter(Boolean);
+    }
+
+    function renderRouteFallback(availableRoutes) {
+      if (!routeMap) return;
 
       if (!availableRoutes.length) {
         routeMap.innerHTML = '<p class="route-map-empty">Keine GPX-Daten gefunden.</p>';
         return;
       }
 
-      // Leaflet map
-      const map = L.map('routemap', { scrollWheelZoom: true });
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        maxZoom: 18
-      }).addTo(map);
+      const points = availableRoutes.flatMap((route) => route.coordinates);
+      const lats = points.map((p) => p[0]);
+      const lngs = points.map((p) => p[1]);
+      const minLat = Math.min(...lats);
+      const maxLat = Math.max(...lats);
+      const minLng = Math.min(...lngs);
+      const maxLng = Math.max(...lngs);
+      const latRange = Math.max(maxLat - minLat, 0.0001);
+      const lngRange = Math.max(maxLng - minLng, 0.0001);
+      const width = 1000;
+      const height = 520;
+      const padding = 26;
 
-      const allLatLngs = [];
-      availableRoutes.forEach((route) => {
-        const latLngs = route.coordinates.map((c) => [c[0], c[1]]);
-        allLatLngs.push(...latLngs);
-        L.polyline(latLngs, {
-          color: route.color,
-          weight: 4,
-          opacity: 0.85,
-          lineJoin: 'round'
-        }).bindTooltip(route.label, { sticky: true }).addTo(map);
-      });
+      const toXY = (coord) => {
+        const x = padding + ((coord[1] - minLng) / lngRange) * (width - padding * 2);
+        const y = height - padding - ((coord[0] - minLat) / latRange) * (height - padding * 2);
+        return `${x.toFixed(2)},${y.toFixed(2)}`;
+      };
 
-      // Foto-Marker für alle Etappen
-      Object.entries(routePhotoMap).forEach(([key, photos]) => {
-        const section = routeSections.find((s) => s.photoKey === key);
-        const sectionRoutes = section ? section.downloads.map((d) => d.file) : [];
-        const coords = sectionRoutes.flatMap((f) => routeCoordinates[f] || []);
-        if (!coords.length || !photos.length) return;
-        const midCoord = coords[Math.floor(coords.length / 2)];
-        const firstPhoto = photos[0];
-        const thumbIcon = L.divIcon({
-          className: 'leaflet-photo-marker',
-          html: `<img src="assets/gallery-web/${firstPhoto}" alt="">`,
-          iconSize: [48, 48],
-          iconAnchor: [24, 24]
+      const paths = availableRoutes
+        .map(
+          (route) =>
+            `<polyline points="${route.coordinates.map(toXY).join(' ')}" stroke="${route.color}" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"><title>${escapeHtml(route.label)}</title></polyline>`
+        )
+        .join('');
+
+      const legend = availableRoutes
+        .map(
+          (route) =>
+            `<li><span style="background:${route.color}"></span>${escapeHtml(route.label)}</li>`
+        )
+        .join('');
+
+      routeMap.innerHTML = `
+        <div class="route-map-fallback" role="img" aria-label="Schematische Streckenansicht">
+          <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet">
+            <rect x="0" y="0" width="${width}" height="${height}" rx="10" ry="10" fill="#f2f6f8"></rect>
+            ${paths}
+          </svg>
+          <ul class="route-map-legend">${legend}</ul>
+        </div>
+      `;
+    }
+
+    function renderRouteMap() {
+      if (!routeMap) return;
+
+      const availableRoutes = getAvailableRoutes();
+
+      if (!availableRoutes.length) {
+        routeMap.innerHTML = '<p class="route-map-empty">Keine GPX-Daten gefunden.</p>';
+        return;
+      }
+
+      if (typeof L === 'undefined') {
+        renderRouteFallback(availableRoutes);
+        return;
+      }
+
+      try {
+        routeMap.innerHTML = '';
+        const map = L.map('routemap', { scrollWheelZoom: true });
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+          maxZoom: 18
+        }).addTo(map);
+
+        const allLatLngs = [];
+        availableRoutes.forEach((route) => {
+          const latLngs = route.coordinates.map((c) => [c[0], c[1]]);
+          allLatLngs.push(...latLngs);
+          L.polyline(latLngs, {
+            color: route.color,
+            weight: 4,
+            opacity: 0.85,
+            lineJoin: 'round'
+          }).bindTooltip(route.label, { sticky: true }).addTo(map);
         });
-        L.marker([midCoord[0], midCoord[1]], { icon: thumbIcon })
-          .bindPopup(`<strong>${section ? section.title : key}</strong><br><img src="assets/gallery-web/${firstPhoto}" style="width:120px;border-radius:6px;margin-top:4px">`)
-          .addTo(map);
-      });
 
-      if (allLatLngs.length) {
-        map.fitBounds(L.latLngBounds(allLatLngs), { padding: [28, 28] });
+        Object.entries(routePhotoMap).forEach(([key, photos]) => {
+          const section = routeSections.find((s) => s.photoKey === key);
+          const sectionRoutes = section ? section.downloads.map((d) => d.file) : [];
+          const coords = sectionRoutes.flatMap((f) => findRouteCoordinates(f));
+          if (!coords.length || !photos.length) return;
+          const midCoord = coords[Math.floor(coords.length / 2)];
+          const firstPhoto = photos[0];
+          const thumbIcon = L.divIcon({
+            className: 'leaflet-photo-marker',
+            html: `<img src="assets/gallery-web/${firstPhoto}" alt="">`,
+            iconSize: [48, 48],
+            iconAnchor: [24, 24]
+          });
+          L.marker([midCoord[0], midCoord[1]], { icon: thumbIcon })
+            .bindPopup(`<strong>${section ? section.title : key}</strong><br><img src="assets/gallery-web/${firstPhoto}" style="width:120px;border-radius:6px;margin-top:4px">`)
+            .addTo(map);
+        });
+
+        if (allLatLngs.length) {
+          map.fitBounds(L.latLngBounds(allLatLngs), { padding: [28, 28] });
+        }
+      } catch (error) {
+        console.error('Route map rendering failed:', error);
+        renderRouteFallback(availableRoutes);
       }
     }
 
-    // Warte auf Leaflet, falls noch nicht bereit
-    if (typeof L !== 'undefined') {
+    function initializeRouteMap() {
       renderRouteMap();
-    } else {
-      document.querySelector('script[src*="leaflet.js"]').addEventListener('load', renderRouteMap);
+
+      if (typeof L === 'undefined') {
+        const leafletScript = document.querySelector('script[src*="leaflet.js"]');
+        if (leafletScript) {
+          leafletScript.addEventListener('load', renderRouteMap, { once: true });
+        }
+      }
     }
+
+    initializeRouteMap();
   </script>
 
   <script>
