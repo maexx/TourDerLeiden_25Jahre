@@ -207,7 +207,6 @@
               <a href="assets/gallery-web/${file}" target="_blank" rel="noopener noreferrer">
                 <img src="assets/gallery-web/${file}" alt="${label}" loading="lazy" decoding="async">
               </a>
-              <figcaption>${label}</figcaption>
             </figure>
           `;
         })
@@ -977,7 +976,6 @@
           return `
             <figure class="gallery-item is-loading">
               <img data-index="${index}" src="${item.src}" alt="TDL Foto ${caption}" loading="lazy" decoding="async" fetchpriority="low">
-              <figcaption>${caption}</figcaption>
             </figure>
           `;
         })
