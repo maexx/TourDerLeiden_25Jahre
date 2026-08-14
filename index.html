@@ -275,18 +275,52 @@
         return;
       }
 
-      const points = availableRoutes.flatMap((route) => route.coordinates);
-      const lats = points.map((p) => p[0]);
-      const lngs = points.map((p) => p[1]);
-      const minLat = Math.min(...lats);
-      const maxLat = Math.max(...lats);
-      const minLng = Math.min(...lngs);
-      const maxLng = Math.max(...lngs);
+      let minLat = Number.POSITIVE_INFINITY;
+      let maxLat = Number.NEGATIVE_INFINITY;
+      let minLng = Number.POSITIVE_INFINITY;
+      let maxLng = Number.NEGATIVE_INFINITY;
+
+      availableRoutes.forEach((route) => {
+        route.coordinates.forEach((coord) => {
+          const lat = coord[0];
+          const lng = coord[1];
+          if (lat < minLat) minLat = lat;
+          if (lat > maxLat) maxLat = lat;
+          if (lng < minLng) minLng = lng;
+          if (lng > maxLng) maxLng = lng;
+        });
+      });
+
+      if (!Number.isFinite(minLat) || !Number.isFinite(minLng)) {
+        routeMap.innerHTML = '<p class="route-map-empty">Keine GPX-Daten gefunden.</p>';
+        return;
+      }
+
       const latRange = Math.max(maxLat - minLat, 0.0001);
       const lngRange = Math.max(maxLng - minLng, 0.0001);
       const width = 1000;
       const height = 520;
       const padding = 26;
+      const maxPointsPerRoute = 2200;
+
+      const sampleCoordinates = (coordinates) => {
+        if (!Array.isArray(coordinates) || coordinates.length <= maxPointsPerRoute) {
+          return coordinates;
+        }
+
+        const step = Math.ceil(coordinates.length / maxPointsPerRoute);
+        const sampled = [];
+        for (let i = 0; i < coordinates.length; i += step) {
+          sampled.push(coordinates[i]);
+        }
+
+        const last = coordinates[coordinates.length - 1];
+        if (sampled[sampled.length - 1] !== last) {
+          sampled.push(last);
+        }
+
+        return sampled;
+      };
 
       const toXY = (coord) => {
         const x = padding + ((coord[1] - minLng) / lngRange) * (width - padding * 2);
@@ -297,7 +331,7 @@
       const paths = availableRoutes
         .map(
           (route) =>
-            `<polyline points="${route.coordinates.map(toXY).join(' ')}" stroke="${route.color}" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"><title>${escapeHtml(route.label)}</title></polyline>`
+            `<polyline points="${sampleCoordinates(route.coordinates).map(toXY).join(' ')}" stroke="${route.color}" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"><title>${escapeHtml(route.label)}</title></polyline>`
         )
         .join('');
 
