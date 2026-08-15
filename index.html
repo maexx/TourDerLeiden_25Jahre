@@ -156,6 +156,16 @@
             label: 'Rennrad-Fahrt 05.08.2026'
           }
         ]
+      },
+      {
+        title: 'Tag 6: Zusatzetappe',
+        photoKey: 'tag-6',
+        downloads: []
+      },
+      {
+        title: 'Tag 7: Zusatzetappe',
+        photoKey: 'tag-7',
+        downloads: []
       }
     ];
 
@@ -231,6 +241,16 @@
         'Ralf__IMG_20260805_141546.jpg',
         'IMG_4656.jpg',
         'IMG_4666.jpg'
+      ],
+      'tag-6': [
+        'Ralf__IMG_20260808_190845.jpg',
+        'Tori__IMG_5524.JPG',
+        'Tori__IMG_5525.JPG',
+        'Tori__IMG_5558.JPG'
+      ],
+      'tag-7': [
+        'Ralf__IMG_20260810_143951.jpg',
+        'Ralf__IMG_20260810_144023.jpg'
       ]
     };
 
@@ -868,7 +888,107 @@
       return 'other';
     }
 
+    const galleryPinnedFiles = [
+      'Ralf__IMG_20260808_190845.jpg',
+      'Tori__IMG_5524.JPG',
+      'Tori__IMG_5525.JPG',
+      'Tori__IMG_5558.JPG'
+    ];
+
+    const galleryManualDayGroups = {
+      0: [
+        'Ralf__IMG_20260808_190845.jpg',
+        'Tori__IMG_5524.JPG',
+        'Tori__IMG_5525.JPG',
+        'Tori__IMG_5558.JPG'
+      ],
+      1: [],
+      2: [],
+      3: [],
+      4: [],
+      5: [],
+      6: [],
+      7: []
+    };
+
+    const galleryDayOverrideByFile = Object.entries(galleryManualDayGroups).reduce((acc, [day, files]) => {
+      files.forEach((file) => {
+        acc[file] = Number(day);
+      });
+      return acc;
+    }, {});
+
+    const galleryDayByRouteFile = routeSections.reduce((acc, section, dayIndex) => {
+      const files = routePhotoMap[section.photoKey] || [];
+      files.forEach((file) => {
+        if (!(file in acc)) {
+          acc[file] = dayIndex;
+        }
+      });
+      return acc;
+    }, {});
+
+    const galleryDayOrderByDate = {
+      '2026-07-30': 0,
+      '2026-07-31': 0,
+      '2026-08-01': 1,
+      '2026-08-02': 2,
+      '2026-08-03': 3,
+      '2026-08-04': 4,
+      '2026-08-05': 5,
+      '2026-08-06': 6,
+      '2026-08-07': 7,
+      '2026-08-08': 7,
+      '2026-08-09': 7,
+      '2026-08-10': 7
+    };
+
+    function formatDateKey(date) {
+      if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+        return '';
+      }
+
+      const p = (value) => String(value).padStart(2, '0');
+      return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())}`;
+    }
+
+    function getGalleryDayOrder(item) {
+      const pinnedIndex = galleryPinnedFiles.indexOf(item.file);
+      if (pinnedIndex >= 0) {
+        return -100 + pinnedIndex;
+      }
+
+      const fileOverrideDay = galleryDayOverrideByFile[item.file];
+      if (Number.isInteger(fileOverrideDay)) {
+        return fileOverrideDay;
+      }
+
+      const routeDay = galleryDayByRouteFile[item.file];
+      if (Number.isInteger(routeDay)) {
+        return routeDay;
+      }
+
+      const dateKey = formatDateKey(item.captureDate);
+      if (dateKey && Number.isInteger(galleryDayOrderByDate[dateKey])) {
+        return galleryDayOrderByDate[dateKey];
+      }
+
+      return Number.MAX_SAFE_INTEGER;
+    }
+
     function compareGalleryItems(a, b) {
+      const aPinned = galleryPinnedFiles.indexOf(a.file);
+      const bPinned = galleryPinnedFiles.indexOf(b.file);
+      if (aPinned !== bPinned) {
+        return (aPinned >= 0 ? aPinned : Number.MAX_SAFE_INTEGER) - (bPinned >= 0 ? bPinned : Number.MAX_SAFE_INTEGER);
+      }
+
+      const aDayOrder = getGalleryDayOrder(a);
+      const bDayOrder = getGalleryDayOrder(b);
+      if (aDayOrder !== bDayOrder) {
+        return aDayOrder - bDayOrder;
+      }
+
       const aTime = a.captureDate instanceof Date ? a.captureDate.getTime() : Number.NaN;
       const bTime = b.captureDate instanceof Date ? b.captureDate.getTime() : Number.NaN;
       const aHasTime = Number.isFinite(aTime);
@@ -993,6 +1113,11 @@
       const maxHashDistance = 8;
 
       for (const current of items) {
+        if (galleryPinnedFiles.includes(current.file)) {
+          filtered.push(current);
+          continue;
+        }
+
         let similar = false;
 
         for (const prev of filtered) {
