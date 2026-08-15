@@ -18,7 +18,6 @@
     <a href="#historie">Historie &amp; Meilensteine</a>
     <a href="#programm">Programm &amp; Events</a>
     <a href="#team">Team &amp; Kontakte</a>
-    <a href="#bilder">Bilder &amp; Galerie</a>
     <a href="#strecke">Strecke</a>
     <a href="#links">Links &amp; Ressourcen</a>
   </nav>
@@ -44,23 +43,8 @@
       <p><em>TODO: Organisationsteam/Ansprechpartner ergänzen.</em></p>
     </section>
 
-    <section id="bilder">
-      <h2>Bilder &amp; Galerie</h2>
-      <div class="gallery-grid"></div>
-    </section>
-
-    <div id="lightbox" class="lightbox" hidden>
-      <button class="lightbox-close" aria-label="Schließen">&times;</button>
-      <button class="lightbox-prev" aria-label="Vorheriges Bild">&#10094;</button>
-      <img class="lightbox-image" src="" alt="">
-      <button class="lightbox-next" aria-label="Nächstes Bild">&#10095;</button>
-      <button class="lightbox-play" aria-label="Diashow starten/stoppen">▶ Diashow</button>
-      <p class="lightbox-caption"></p>
-      <p class="lightbox-counter"></p>
-    </div>
-
     <section id="strecke">
-      <h2>Strecke</h2>
+      <h2>Strecke &amp; Bilder</h2>
       <p class="route-intro">Alle vorhandenen GPX-Tracks sind unten verlinkt und direkt auf der Karte eingebunden.</p>
       <div id="routemap" class="route-map leaflet-map" aria-label="Übersichtskarte der GPX-Tracks"></div>
       <div class="route-list" id="route-list"></div>
@@ -78,7 +62,6 @@
 
   <script src="assets/gpx-routes.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.js"></script>
   <script>
     const routeSections = [
       {
@@ -280,23 +263,30 @@
       })
       .join('');
 
-    document.querySelectorAll('.route-photos').forEach((container) => {
-      const images = routePhotoMap[container.dataset.route] || [];
-      if (!images.length) return;
+    function renderRoutePhotos() {
+      document.querySelectorAll('.route-photos').forEach((container) => {
+        const images = routePhotoMap[container.dataset.route] || [];
+        if (!images.length) {
+          container.innerHTML = '<span class="route-note">noch keine Fotos vorhanden</span>';
+          return;
+        }
 
-      container.innerHTML = images
-        .map((file) => {
-          const label = file.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ');
-          return `
-            <figure class="route-photo-card">
-              <a href="assets/gallery-web/${file}" target="_blank" rel="noopener noreferrer">
-                <img src="assets/gallery-web/${file}" alt="${label}" loading="lazy" decoding="async">
-              </a>
-            </figure>
-          `;
-        })
-        .join('');
-    });
+        container.innerHTML = images
+          .map((file) => {
+            const label = file.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ');
+            return `
+              <figure class="route-photo-card">
+                <a href="assets/gallery-web/${file}" target="_blank" rel="noopener noreferrer">
+                  <img src="assets/gallery-web/${file}" alt="${label}" loading="lazy" decoding="async">
+                </a>
+              </figure>
+            `;
+          })
+          .join('');
+      });
+    }
+
+    renderRoutePhotos();
 
     const routeMap = document.getElementById('routemap');
     const gpxFiles = routeSections.flatMap((section) => section.downloads.map((route) => route.file));
@@ -864,36 +854,6 @@
       return null;
     }
 
-    function formatDate(date) {
-      const p = (v) => String(v).padStart(2, '0');
-      return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())} ${p(date.getHours())}:${p(date.getMinutes())}:${p(date.getSeconds())}`;
-    }
-
-    function getCaption(fileName, captureDate) {
-      if (captureDate instanceof Date && !Number.isNaN(captureDate.getTime())) {
-        return formatDate(captureDate);
-      }
-      return fileName.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ');
-    }
-
-    function getMotifKey(fileName) {
-      const lower = fileName.toLowerCase();
-      if (lower.startsWith('tori__')) return 'tori';
-      if (lower.startsWith('ralf__')) return 'ralf';
-      if (lower.startsWith('ralf_k__')) return 'ralf-k';
-      if (lower.startsWith('jochen__')) return 'jochen';
-      if (lower.startsWith('signal-')) return 'signal';
-      if (lower.startsWith('img_')) return 'img';
-      return 'other';
-    }
-
-    const galleryPinnedFiles = [
-      'Ralf__IMG_20260808_190845.jpg',
-      'Tori__IMG_5524.JPG',
-      'Tori__IMG_5525.JPG',
-      'Tori__IMG_5558.JPG'
-    ];
-
     const galleryManualDayGroups = {
       0: [
         'Ralf__IMG_20260808_190845.jpg',
@@ -951,316 +911,68 @@
       return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())}`;
     }
 
-    function getGalleryDayOrder(item) {
-      const pinnedIndex = galleryPinnedFiles.indexOf(item.file);
-      if (pinnedIndex >= 0) {
-        return -100 + pinnedIndex;
+    function getDayForPhoto(fileName) {
+      const overrideDay = galleryDayOverrideByFile[fileName];
+      if (Number.isInteger(overrideDay)) {
+        return overrideDay;
       }
 
-      const fileOverrideDay = galleryDayOverrideByFile[item.file];
-      if (Number.isInteger(fileOverrideDay)) {
-        return fileOverrideDay;
-      }
-
-      const routeDay = galleryDayByRouteFile[item.file];
+      const routeDay = galleryDayByRouteFile[fileName];
       if (Number.isInteger(routeDay)) {
         return routeDay;
       }
 
-      const dateKey = formatDateKey(item.captureDate);
+      const parsedDate = parseDateFromName(fileName);
+      const dateKey = formatDateKey(parsedDate);
       if (dateKey && Number.isInteger(galleryDayOrderByDate[dateKey])) {
         return galleryDayOrderByDate[dateKey];
       }
 
-      return Number.MAX_SAFE_INTEGER;
+      return routeSections.length - 1;
     }
 
-    function compareGalleryItems(a, b) {
-      const aPinned = galleryPinnedFiles.indexOf(a.file);
-      const bPinned = galleryPinnedFiles.indexOf(b.file);
-      if (aPinned !== bPinned) {
-        return (aPinned >= 0 ? aPinned : Number.MAX_SAFE_INTEGER) - (bPinned >= 0 ? bPinned : Number.MAX_SAFE_INTEGER);
-      }
-
-      const aDayOrder = getGalleryDayOrder(a);
-      const bDayOrder = getGalleryDayOrder(b);
-      if (aDayOrder !== bDayOrder) {
-        return aDayOrder - bDayOrder;
-      }
-
-      const aTime = a.captureDate instanceof Date ? a.captureDate.getTime() : Number.NaN;
-      const bTime = b.captureDate instanceof Date ? b.captureDate.getTime() : Number.NaN;
-      const aHasTime = Number.isFinite(aTime);
-      const bHasTime = Number.isFinite(bTime);
-
-      if (aHasTime && bHasTime) {
-        if (aTime !== bTime) {
-          return aTime - bTime;
+    function mergeAllPhotosIntoRouteMap() {
+      routeSections.forEach((section) => {
+        if (!Array.isArray(routePhotoMap[section.photoKey])) {
+          routePhotoMap[section.photoKey] = [];
         }
-      } else if (aHasTime !== bHasTime) {
-        return aHasTime ? -1 : 1;
-      }
+      });
 
-      const aMotif = getMotifKey(a.file);
-      const bMotif = getMotifKey(b.file);
-      if (aMotif !== bMotif) {
-        return aMotif.localeCompare(bMotif, 'de', { numeric: true, sensitivity: 'base' });
-      }
-
-      return a.file.localeCompare(b.file, 'de', { numeric: true, sensitivity: 'base' });
-    }
-
-    async function sha256Hex(blob) {
-      if (!window.crypto || !window.crypto.subtle) {
-        return '';
-      }
-      const buffer = await blob.arrayBuffer();
-      const digest = await window.crypto.subtle.digest('SHA-256', buffer);
-      return Array.from(new Uint8Array(digest))
-        .map((b) => b.toString(16).padStart(2, '0'))
-        .join('');
-    }
-
-    async function perceptualDhash(blob) {
-      try {
-        const bitmap = await createImageBitmap(blob);
-        const canvas = document.createElement('canvas');
-        canvas.width = 9;
-        canvas.height = 8;
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        if (!ctx) return null;
-        ctx.drawImage(bitmap, 0, 0, 9, 8);
-        bitmap.close();
-
-        const { data } = ctx.getImageData(0, 0, 9, 8);
-        let bitString = '';
-        for (let y = 0; y < 8; y++) {
-          for (let x = 0; x < 8; x++) {
-            const idxA = (y * 9 + x) * 4;
-            const idxB = (y * 9 + x + 1) * 4;
-            const grayA = data[idxA] * 0.299 + data[idxA + 1] * 0.587 + data[idxA + 2] * 0.114;
-            const grayB = data[idxB] * 0.299 + data[idxB + 1] * 0.587 + data[idxB + 2] * 0.114;
-            bitString += grayA > grayB ? '1' : '0';
-          }
-        }
-
-        return bitString;
-      } catch {
-        return null;
-      }
-    }
-
-    function hammingDistanceBits(a, b) {
-      if (!a || !b || a.length !== b.length) return Number.POSITIVE_INFINITY;
-      let dist = 0;
-      for (let i = 0; i < a.length; i++) {
-        if (a[i] !== b[i]) dist += 1;
-      }
-      return dist;
-    }
-
-    async function buildGalleryItems() {
-      const dedupHashes = new Set();
       const uniqueFiles = Array.from(new Set(galleryFiles));
-      const items = [];
-
-      for (const file of uniqueFiles) {
-        const src = `assets/gallery-web/${file}`;
-        let blob = null;
-        let exifDate = null;
-        let visualHash = null;
-
-        try {
-          const response = await fetch(src, { cache: 'no-store' });
-          if (!response.ok) {
-            continue;
-          }
-          blob = await response.blob();
-          const hash = await sha256Hex(blob);
-          if (hash && dedupHashes.has(hash)) {
-            continue;
-          }
-          if (hash) {
-            dedupHashes.add(hash);
-          }
-          visualHash = await perceptualDhash(blob);
-        } catch {
-          continue;
+      uniqueFiles.forEach((file) => {
+        const day = getDayForPhoto(file);
+        const section = routeSections[day] || routeSections[routeSections.length - 1];
+        const targetKey = section.photoKey;
+        const targetList = routePhotoMap[targetKey];
+        if (!targetList.includes(file)) {
+          targetList.push(file);
         }
+      });
 
-        if (window.exifr && blob) {
-          try {
-            const exifData = await window.exifr.parse(blob, ['DateTimeOriginal', 'CreateDate']);
-            const rawDate = exifData?.DateTimeOriginal || exifData?.CreateDate || null;
-            if (rawDate instanceof Date && !Number.isNaN(rawDate.getTime())) {
-              exifDate = rawDate;
-            }
-          } catch {
-            exifDate = null;
+      routeSections.forEach((section) => {
+        const key = section.photoKey;
+        routePhotoMap[key].sort((a, b) => {
+          const aDate = parseDateFromName(a);
+          const bDate = parseDateFromName(b);
+          const aTime = aDate instanceof Date ? aDate.getTime() : Number.NaN;
+          const bTime = bDate instanceof Date ? bDate.getTime() : Number.NaN;
+          const aHasTime = Number.isFinite(aTime);
+          const bHasTime = Number.isFinite(bTime);
+
+          if (aHasTime && bHasTime && aTime !== bTime) {
+            return aTime - bTime;
           }
-        }
-
-        const fallbackDate = parseDateFromName(file);
-        const captureDate = exifDate || fallbackDate;
-        items.push({ file, captureDate, src, visualHash });
-      }
-
-      items.sort(compareGalleryItems);
-
-      const filtered = [];
-      const maxTimeDeltaMs = 5 * 60 * 1000;
-      const maxHashDistance = 8;
-
-      for (const current of items) {
-        if (galleryPinnedFiles.includes(current.file)) {
-          filtered.push(current);
-          continue;
-        }
-
-        let similar = false;
-
-        for (const prev of filtered) {
-          const hasDates = current.captureDate instanceof Date && prev.captureDate instanceof Date;
-          if (!hasDates) continue;
-
-          const delta = Math.abs(current.captureDate.getTime() - prev.captureDate.getTime());
-          if (delta > maxTimeDeltaMs) continue;
-
-          if (current.visualHash && prev.visualHash) {
-            const dist = hammingDistanceBits(current.visualHash, prev.visualHash);
-            if (dist <= maxHashDistance) {
-              similar = true;
-              break;
-            }
+          if (aHasTime !== bHasTime) {
+            return aHasTime ? -1 : 1;
           }
-        }
 
-        if (!similar) {
-          filtered.push(current);
-        }
-      }
-
-      // Safety fallback: never return an empty gallery when source items exist.
-      if (!filtered.length && items.length) {
-        return items;
-      }
-
-      return filtered;
-    }
-
-    const galleryGrid = document.querySelector('.gallery-grid');
-    let galleryImgs = [];
-    const lightbox = document.getElementById('lightbox');
-    const lightboxImage = lightbox.querySelector('.lightbox-image');
-    const lightboxCaption = lightbox.querySelector('.lightbox-caption');
-    const counter = lightbox.querySelector('.lightbox-counter');
-    const playBtn = lightbox.querySelector('.lightbox-play');
-    let currentIndex = 0;
-    let slideshowTimer = null;
-
-    function renderGallery(items) {
-      if (!galleryGrid) return;
-      galleryGrid.innerHTML = items
-        .map((item, index) => {
-          const caption = getCaption(item.file, item.captureDate);
-          return `
-            <figure class="gallery-item is-loading">
-              <img data-index="${index}" src="${item.src}" alt="TDL Foto ${caption}" loading="lazy" decoding="async" fetchpriority="low">
-            </figure>
-          `;
-        })
-        .join('');
-
-      galleryImgs = Array.from(document.querySelectorAll('.gallery-grid img'));
-      bindGalleryEvents();
-    }
-
-    function showImage(index) {
-      if (!galleryImgs.length) return;
-      currentIndex = (index + galleryImgs.length) % galleryImgs.length;
-      lightboxImage.src = galleryImgs[currentIndex].src;
-      lightboxImage.alt = galleryImgs[currentIndex].alt;
-      const captionNode = galleryImgs[currentIndex].closest('.gallery-item')?.querySelector('figcaption');
-      lightboxCaption.textContent = captionNode ? captionNode.textContent : '';
-      counter.textContent = (currentIndex + 1) + ' / ' + galleryImgs.length;
-    }
-
-    function openLightbox(index) {
-      showImage(index);
-      lightbox.hidden = false;
-    }
-
-    function closeLightbox() {
-      lightbox.hidden = true;
-      stopSlideshow();
-    }
-
-    function stopSlideshow() {
-      clearInterval(slideshowTimer);
-      slideshowTimer = null;
-      playBtn.textContent = '▶ Diashow';
-    }
-
-    function toggleSlideshow() {
-      if (!galleryImgs.length) return;
-      if (slideshowTimer) {
-        stopSlideshow();
-      } else {
-        slideshowTimer = setInterval(() => showImage(currentIndex + 1), 2500);
-        playBtn.textContent = '⏸ Stopp';
-      }
-    }
-
-    function bindGalleryEvents() {
-      galleryImgs.forEach((img, i) => {
-        img.style.cursor = 'pointer';
-        img.addEventListener('click', () => openLightbox(i));
-        img.addEventListener('load', () => {
-          const item = img.closest('.gallery-item');
-          if (item) item.classList.remove('is-loading');
+          return a.localeCompare(b, 'de', { numeric: true, sensitivity: 'base' });
         });
       });
     }
 
-    async function initGallery() {
-      const baseItems = Array.from(new Set(galleryFiles)).map((file) => ({
-        file,
-        captureDate: parseDateFromName(file),
-        src: `assets/gallery-web/${file}`,
-        visualHash: null,
-      }));
-
-      baseItems.sort(compareGalleryItems);
-
-      renderGallery(baseItems);
-
-      try {
-        const items = await buildGalleryItems();
-        if (items && items.length) {
-          renderGallery(items);
-        }
-      } catch {
-        // Keep the fallback gallery if enrichment fails.
-      }
-    }
-
-    initGallery();
-
-    lightbox.querySelector('.lightbox-close').addEventListener('click', closeLightbox);
-    lightbox.querySelector('.lightbox-prev').addEventListener('click', () => showImage(currentIndex - 1));
-    lightbox.querySelector('.lightbox-next').addEventListener('click', () => showImage(currentIndex + 1));
-    playBtn.addEventListener('click', toggleSlideshow);
-
-    lightbox.addEventListener('click', (e) => {
-      if (e.target === lightbox) closeLightbox();
-    });
-
-    document.addEventListener('keydown', (e) => {
-      if (lightbox.hidden) return;
-      if (e.key === 'Escape') closeLightbox();
-      if (e.key === 'ArrowLeft') showImage(currentIndex - 1);
-      if (e.key === 'ArrowRight') showImage(currentIndex + 1);
-    });
+    mergeAllPhotosIntoRouteMap();
+    renderRoutePhotos();
   </script>
 </body>
 </html>
